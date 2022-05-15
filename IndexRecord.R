@@ -139,9 +139,9 @@ IndexRecord <- function(data, depth=c('MBD','ED'), plot=TRUE){
     lines(1:length(Ind.RecordU), cumsum(Ind.RecordU), type = 's', col=2 )
     legend("topleft", legend = c('total records','upper records', "lower records" ), col = c(col=1,2,4),
            ncol = 1, cex = 1, lwd = 2, bty='n')
-    matplot(Data, type = 'l', col = grey(.7,.4), main='Functional Data', xlab = 's')
-    matplot(Data[,Idx.records$UpperR==1], type = 'l', col = 2, add = TRUE )
-    matplot(Data[,Idx.records$LowerR==1], type = 'l', col = 4, add = TRUE )
+    matplot(data, type = 'l', col = grey(.7,.4), main='Functional Data', xlab = 's')
+    matplot(data[,Ind.RecordU==1], type = 'l', col = 2, add = TRUE )
+    matplot(data[,Ind.RecordL==1], type = 'l', col = 4, add = TRUE )
     par(mfrow=c(1,1))
   }
   
