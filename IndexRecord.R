@@ -79,8 +79,8 @@ pwise_depth <- function(dt, n) {
 IndexRecord <- function(data, depth=c('MBD','ED'), plot=TRUE){
   # It computes the index time where record curves are observed
   # args:
-  #   data: a matrix with dim m x n, where m is the total num of points observed for a curve
-  #         and n is the total number of curves
+  #   data: a matrix with dim m x n, where m is the total num of points observed for a function
+  #         and n is the total number of functions
   #   depth: depth to be use to order curves and estimate the records
   #
   # values: list 
