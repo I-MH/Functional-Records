@@ -73,14 +73,13 @@ pwise_depth <- function(dt, n) {
   return(pdepth)
 }
 
-#-------------------------------------------------------------------------------
+#computing time records --------------------------------------------------------
 
-
-IndexRecord <- function(data, depth=c('MBD','ED'), plot=TRUE){
-  # It computes the index time where record curves are observed
+IndexRecord <- function(data, depth=c('MBD','ED'), plot=FALSE){
+  # It computes the index times where record curves are observed
   # args:
-  #   data: a matrix with dim m x n, where m is the total num of points observed for a function
-  #         and n is the total number of functions
+  #   data: a matrix with dim m x n, where m is the total num of points observed 
+  #         for a function, and n is the total number of functions
   #   depth: depth to be use to order curves and estimate the records
   #
   # values: list 
@@ -91,61 +90,104 @@ IndexRecord <- function(data, depth=c('MBD','ED'), plot=TRUE){
   method <- match.arg(depth)
   N <- dim(data)[2]
   p <- dim(data)[1]
-  Ind.Record <- rep(0,N)
-  Ind.RecordU <- rep(0,N)
-  Ind.RecordL <- rep(0,N)
-  Ind.Record[1:2] <- 1 # the the first two are record curves 
-  tlastR <- 2          # time corresponding to the last record
-  indexminmax <- matrix(c(1,2),2,2)  # a matrix containing the two most extreme curves at each time
-  Mat_means0 <-  rowMeans(data[,1:2])
-  Ind.RecordL[1] <- ifelse( sum( data[,1]<Mat_means0 ) < floor(p/2), 0,1)
-  Ind.RecordL[2] <- ifelse( sum( data[,2]<Mat_means0) < floor(p/2), 0,1)
+  Indx.r.U <- Indx.r.L <-  rep(0,N) # indicators where records are observed
+  Yu <- Yl <-  rep(0,N)  # indx process of upper/lower recrods (sumsum of Indx.r.U)
+  indexminmax <- matrix(NA,N,2)  # a matrix containing the two most extreme curves at each time
+  indexminmax[1,] <- indexminmax[2,] <- c(1,2)   # a matrix containing the two most extreme curves at each time
+  # classification of the two first records
+  mean0 <-  rowMeans(data[,1:2])
+  # is the first curve a lower/upper record?
+  if( sum(data[,1]< mean0)>floor(p/2) ){
+    Indx.r.L[1] <- 1
+    Yl[1:2] <- 1
+  }else{
+    Indx.r.U[1] <- 1
+    Yu[1:2] <- 1
+  }
+  # is the second function a lower/upper record?
+  if( sum(data[,2]< mean0) > floor(p/2) ){
+    Indx.r.L[2] <- 1
+    Yl[1:2] <- 2
+  }else{
+    Indx.r.U[2] <- 1
+    Yu[1:2] <- 2
+  }
   
   if(method=='MBD'){
     for (k in 3:N) {
       new.data=data[,1:k]
       depth=fMBD(new.data)
-      index=order(depth)
-      if( depth[k]<depth[tlastR] || depth[k]<depth[indexminmax[1,k-1]] || depth[k]<depth[indexminmax[2,k-1]]){
-        Ind.Record[k] <- 1
-        Ind.RecordL[k] <-  ifelse( sum( data[,k]<rowMeans(data[,1:k]) )< floor(p/2), 0,1)
-        tlastR <- k
+      index=order(depth) # from the smallest to the biggest
+      extreme.index <- index[1:2]
+      
+      if(k%in%extreme.index){
+        mean0 <-  rowMeans(new.data)
+        if(sum(data[,k]< mean0) > floor(p/2)){
+          # k is candidate for lower record
+          Indx.r.L[k] <- 1*(depth[k] < depth[Yl[k-1]])
+          Yl[k] <- k*Indx.r.L[k] + Yl[k-1]*1*(depth[k] >= depth[Yl[k-1]])
+          Yu[k] <- Yu[k-1]
+        }else{
+          # k is candidate for upper record
+          Indx.r.U[k] <- 1*(depth[k] < depth[Yu[k-1]])
+          Yu[k] <- k*Indx.r.U[k] + Yu[k-1]*1*(depth[k] >= depth[Yu[k-1]])
+          Yl[k] <- Yl[k-1]
+        }
+      }else{
+        Yu[k] <- Yu[k-1]
+        Yl[k] <- Yl[k-1]
       }
-      indexminmax <- cbind(indexminmax, index[1:2])
+      indexminmax[k,] <- extreme.index[order(extreme.index)]
     }
   }else{
-      for (k in 3:N) {
-        new.data=data[,1:k]
-        depth= extremal_depth(t(new.data))
-        index=order(depth)
-        if( depth[k]<depth[tlastR] || depth[k]<depth[indexminmax[1,k-1]] || depth[k]<depth[indexminmax[2,k-1]]){
-          Ind.Record[k] <- 1
-          Ind.RecordL[k] <-  ifelse( sum( data[,k]<rowMeans(data[,1:k]) )< floor(p/2), 0,1)
-          tlastR <- k
+    # Continuar aqui................................
+    for (k in 3:N) {
+      new.data=data[,1:k]
+      depth= extremal_depth(t(new.data))
+      index=order(depth) # from the smallest to the biggest
+      extreme.index <- index[1:2]
+      
+      if(k%in%extreme.index){
+        mean0 <-  rowMeans(new.data)
+        if(sum(data[,k]< mean0) > floor(p/2)){
+          # k is candidate for lower record
+          Indx.r.L[k] <- 1*(depth[k] < depth[Yl[k-1]])
+          Yl[k] <- k*Indx.r.L[k] + Yl[k-1]*1*(depth[k] >= depth[Yl[k-1]])
+          Yu[k] <- Yu[k-1]
+        }else{
+          # k is candidate for upper record
+          Indx.r.U[k] <- 1*(depth[k] < depth[Yu[k-1]])
+          Yu[k] <- k*Indx.r.U[k] + Yu[k-1]*1*(depth[k] >= depth[Yu[k-1]])
+          Yl[k] <- Yl[k-1]
         }
-        indexminmax <- cbind(indexminmax, index[1:2])
+      }else{
+        Yu[k] <- Yu[k-1]
+        Yl[k] <- Yl[k-1]
       }
+      indexminmax[k,] <- extreme.index[order(extreme.index)]
+    }
   }
-  
-  Ind.RecordU <- Ind.Record -Ind.RecordL 
+  Ind.Record <- Indx.r.L+Indx.r.U # upper and lower record 
   timeC <- 1/sqrt(1:N)
   Ind.S=timeC*cumsum(Ind.Record)
   
   if(plot){
+    
+    ## modificar esto
     par(mfrow=c(1,2))
     plot(1:length(Ind.Record), cumsum(Ind.Record), type = 's', col=1,
          ylab = 'num of records', xlab = 'index of time', main=paste('Record times with', method))
-    lines(1:length(Ind.RecordL), cumsum(Ind.RecordL), type = 's', col=4 )
-    lines(1:length(Ind.RecordU), cumsum(Ind.RecordU), type = 's', col=2 )
+    lines(1:length(Indx.r.L), cumsum(Indx.r.L), type = 's', col=4 )
+    lines(1:length(Indx.r.U), cumsum(Indx.r.U), type = 's', col=2 )
     legend("topleft", legend = c('total records','upper records', "lower records" ), col = c(col=1,2,4),
            ncol = 1, cex = 1, lwd = 2, bty='n')
     matplot(data, type = 'l', col = grey(.7,.4), main='Functional Data', xlab = 's')
-    matplot(data[,Ind.RecordU==1], type = 'l', col = 2, add = TRUE )
-    matplot(data[,Ind.RecordL==1], type = 'l', col = 4, add = TRUE )
+    matplot(data[,Indx.r.U==1], type = 'l', col = 2, add = TRUE )
+    matplot(data[,Indx.r.L==1], type = 'l', col = 4, add = TRUE )
     par(mfrow=c(1,1))
   }
   
-  return(list(Est=Ind.S, Records=Ind.Record, UpperR=Ind.RecordU, 
-              LowerR=Ind.RecordL,IndexSupInf=indexminmax) )
+  return(list(Est=Ind.S, Records=Ind.Record, UpperR=Indx.r.U, 
+              LowerR=Indx.r.L, IndexSupInf=indexminmax) )
 }
 
